@@ -1,0 +1,25 @@
+{
+  "name": "scraper",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "start": "node ./dist/index.js",
+    "dev": "concurrently \"tsc --watch\" \"nodemon dist/index.js\""
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@types/node": "^18.15.0",
+    "@types/puppeteer": "^5.4.4",
+    "@types/random-useragent": "^0.3.1",
+    "concurrently": "^7.0.0",
+    "nodemon": "^2.0.15"
+  },
+  "dependencies": {
+    "mongodb": "^5.1.0",
+    "puppeteer": "^13.4.0",
+    "random-useragent": "^0.5.0"
+  }
+}
