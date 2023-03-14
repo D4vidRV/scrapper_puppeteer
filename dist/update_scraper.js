@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.executeScraper = void 0;
+exports.executeUpdateScraper = void 0;
 const puppeteer_1 = __importDefault(require("puppeteer"));
 const random_useragent_1 = __importDefault(require("random-useragent"));
 const mongodb_1 = require("mongodb");
@@ -25,20 +25,20 @@ const CONFIG_PUPPETER = {
 // MONGODB CONFIG
 const uri = "mongodb://localhost:27017";
 const client = new mongodb_1.MongoClient(uri);
-const executeScraper = () => __awaiter(void 0, void 0, void 0, function* () {
+const executeUpdateScraper = () => __awaiter(void 0, void 0, void 0, function* () {
     console.log("Ejecutando funcion visitar pagina!!");
     const browser = yield puppeteer_1.default.launch(CONFIG_PUPPETER);
     const page = yield browser.newPage();
     page.setDefaultTimeout(40000);
     page.setViewport({ width: 1920, height: 1080 });
     const subastas = {
-        san_carlos: "http://www.aurora-applnx.com/aurora_clientes/subastas/preciosViewHistorico.php?c=1",
-        el_progreso_barranca: "http://www.aurora-applnx.com/aurora_clientes/subastas/preciosViewHistorico.php?c=2",
-        el_progreso_nicoya: "http://www.aurora-applnx.com/aurora_clientes/subastas/preciosViewHistorico.php?c=3",
-        maleco: "http://www.aurora-applnx.com/aurora_clientes/subastas/preciosViewHistorico.php?c=4",
-        montecillos: "http://www.aurora-applnx.com/aurora_clientes/subastas/preciosViewHistorico.php?c=5",
-        el_progreso_limonal: "http://www.aurora-applnx.com/aurora_clientes/subastas/preciosViewHistorico.php?c=7",
-        el_progreso_parrita: "http://www.aurora-applnx.com/aurora_clientes/subastas/preciosViewHistorico.php?c=6",
+        san_carlos: "http://www.aurora-applnx.com/aurora_clientes/subastas/index.php?c=1",
+        el_progreso_barranca: "http://www.aurora-applnx.com/aurora_clientes/subastas/index.php?c=2",
+        el_progreso_nicoya: "http://www.aurora-applnx.com/aurora_clientes/subastas/index.php?c=3",
+        maleco: "http://www.aurora-applnx.com/aurora_clientes/subastas/index.php?c=4",
+        montecillos: "http://www.aurora-applnx.com/aurora_clientes/subastas/index.php?c=5",
+        el_progreso_limonal: "http://www.aurora-applnx.com/aurora_clientes/subastas/index.php?c=7",
+        el_progreso_parrita: "http://www.aurora-applnx.com/aurora_clientes/subastas/index.php?c=6",
     };
     client.connect();
     console.log("Conexión a MongoDB exitosa.");
@@ -48,14 +48,22 @@ const executeScraper = () => __awaiter(void 0, void 0, void 0, function* () {
             yield page.goto(subastas[key]);
             yield page.waitForSelector("table");
             const tablaFilas = yield page.$x("//tbody//tr");
-            for (const [index, value] of tablaFilas.entries()) {
+            let celdaTipoAnimal;
+            let celdaRangoPeso;
+            let celdaPrecioMax;
+            let celdaPrecioMin;
+            let celdaPrecioProm;
+            let celdaFecha;
+            const database = client.db("fincaticadb");
+            const collection = database.collection("auctions");
+            for (const [index, value] of tablaFilas.reverse().entries()) {
                 const celdas = yield value.$x("./td");
-                const celdaTipoAnimal = celdas[0];
-                const celdaRangoPeso = celdas[1];
-                const celdaPrecioMax = celdas[2];
-                const celdaPrecioMin = celdas[3];
-                const celdaPrecioProm = celdas[4];
-                const celdaFecha = celdas[5];
+                celdaTipoAnimal = celdas[0];
+                celdaRangoPeso = celdas[1];
+                celdaPrecioMax = celdas[2];
+                celdaPrecioMin = celdas[3];
+                celdaPrecioProm = celdas[4];
+                celdaFecha = celdas[5];
                 let tipoAnimalTexto = yield page.evaluate((celdaTipoAnimal) => {
                     return celdaTipoAnimal === null || celdaTipoAnimal === void 0 ? void 0 : celdaTipoAnimal.innerText;
                 }, celdaTipoAnimal);
@@ -78,8 +86,6 @@ const executeScraper = () => __awaiter(void 0, void 0, void 0, function* () {
                 // Date fetching
                 const fechaLocal = new Date(Date.parse(fechaTexto));
                 const fechaUTC = new Date(fechaLocal.toISOString());
-                const database = client.db("fincaticadb");
-                const collection = database.collection("auctions");
                 const filtro = {
                     name: key,
                 };
@@ -91,14 +97,35 @@ const executeScraper = () => __awaiter(void 0, void 0, void 0, function* () {
                     averagePrice: precioPromTexto,
                     date: fechaUTC,
                 };
-                const result = yield collection.updateOne(filtro, {
-                    $push: { prices: nuevoPrice },
-                    $set: { last_auction: fechaUTC }, // Agregamos el campo last_auction con el valor de fechaUTC
-                }, { upsert: true });
+                // Find the document by field "name"
+                const auction = yield collection.findOne({ name: key });
+                console.log(auction === null || auction === void 0 ? void 0 : auction.last_auction);
+                console.log(fechaUTC);
+                if ((auction === null || auction === void 0 ? void 0 : auction.last_auction) >= fechaUTC) {
+                    console.log(`LOS REGISTROS DE LA WEB DE LA SUBASTA ${key} NO SE HAN ACTUALIZADO, FECHA: ${fechaUTC
+                        .toISOString()
+                        .substring(0, 10)}`);
+                    break;
+                }
+                // Update the document with the new registry of prices
+                const result = yield collection.updateOne({ name: key }, {
+                    $push: {
+                        prices: {
+                            $each: [nuevoPrice],
+                            $position: 0,
+                        },
+                    },
+                });
                 if (!result) {
                     console.log("Error al agregar el nuevo precio");
                 }
-                console.log(`Precio agregado con éxito ${index} / ${tablaFilas.length}`);
+                console.log(`Precio agregado con éxito ${index + 1} / ${tablaFilas.length}`);
+                // Actualizar finalmente el campo last_auction
+                if (index === tablaFilas.length - 1) {
+                    yield collection.updateOne(filtro, {
+                        $set: { last_auction: fechaUTC },
+                    });
+                }
             }
         }
         catch (error) {
@@ -109,4 +136,4 @@ const executeScraper = () => __awaiter(void 0, void 0, void 0, function* () {
     client.close();
     browser.close();
 });
-exports.executeScraper = executeScraper;
+exports.executeUpdateScraper = executeUpdateScraper;

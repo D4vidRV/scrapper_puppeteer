@@ -14,8 +14,8 @@ const CONFIG_PUPPETER = {
 const uri = "mongodb://localhost:27017";
 const client = new MongoClient(uri);
 
-export const executeScraper = async () => {
-  console.log("Ejecutando script para poblar la BD de cero");
+export const executeUpdateScraper = async () => {
+  console.log("Ejecutando script para actualizar registros!!");
 
   const browser = await puppeteer.launch(CONFIG_PUPPETER);
   const page = await browser.newPage();
@@ -24,19 +24,19 @@ export const executeScraper = async () => {
 
   const subastas: any = {
     san_carlos:
-      "http://www.aurora-applnx.com/aurora_clientes/subastas/preciosViewHistorico.php?c=1",
+      "http://www.aurora-applnx.com/aurora_clientes/subastas/index.php?c=1",
     el_progreso_barranca:
-      "http://www.aurora-applnx.com/aurora_clientes/subastas/preciosViewHistorico.php?c=2",
+      "http://www.aurora-applnx.com/aurora_clientes/subastas/index.php?c=2",
     el_progreso_nicoya:
-      "http://www.aurora-applnx.com/aurora_clientes/subastas/preciosViewHistorico.php?c=3",
+      "http://www.aurora-applnx.com/aurora_clientes/subastas/index.php?c=3",
     maleco:
-      "http://www.aurora-applnx.com/aurora_clientes/subastas/preciosViewHistorico.php?c=4",
+      "http://www.aurora-applnx.com/aurora_clientes/subastas/index.php?c=4",
     montecillos:
-      "http://www.aurora-applnx.com/aurora_clientes/subastas/preciosViewHistorico.php?c=5",
+      "http://www.aurora-applnx.com/aurora_clientes/subastas/index.php?c=5",
     el_progreso_limonal:
-      "http://www.aurora-applnx.com/aurora_clientes/subastas/preciosViewHistorico.php?c=7",
+      "http://www.aurora-applnx.com/aurora_clientes/subastas/index.php?c=7",
     el_progreso_parrita:
-      "http://www.aurora-applnx.com/aurora_clientes/subastas/preciosViewHistorico.php?c=6",
+      "http://www.aurora-applnx.com/aurora_clientes/subastas/index.php?c=6",
   };
 
   client.connect();
@@ -51,15 +51,25 @@ export const executeScraper = async () => {
 
       const tablaFilas = await page.$x("//tbody//tr");
 
-      for (const [index, value] of tablaFilas.entries()) {
+      let celdaTipoAnimal;
+      let celdaRangoPeso;
+      let celdaPrecioMax;
+      let celdaPrecioMin;
+      let celdaPrecioProm;
+      let celdaFecha;
+
+      const database = client.db("fincaticadb");
+      const collection = database.collection("auctions");
+
+      for (const [index, value] of tablaFilas.reverse().entries()) {
         const celdas = await value.$x("./td");
 
-        const celdaTipoAnimal = celdas[0];
-        const celdaRangoPeso = celdas[1];
-        const celdaPrecioMax = celdas[2];
-        const celdaPrecioMin = celdas[3];
-        const celdaPrecioProm = celdas[4];
-        const celdaFecha = celdas[5];
+        celdaTipoAnimal = celdas[0];
+        celdaRangoPeso = celdas[1];
+        celdaPrecioMax = celdas[2];
+        celdaPrecioMin = celdas[3];
+        celdaPrecioProm = celdas[4];
+        celdaFecha = celdas[5];
 
         let tipoAnimalTexto = await page.evaluate((celdaTipoAnimal) => {
           return celdaTipoAnimal?.innerText;
@@ -91,8 +101,6 @@ export const executeScraper = async () => {
         const fechaLocal = new Date(Date.parse(fechaTexto));
         const fechaUTC = new Date(fechaLocal.toISOString());
 
-        const database = client.db("fincaticadb");
-        const collection = database.collection("auctions");
         const filtro = {
           name: key,
         };
@@ -106,22 +114,47 @@ export const executeScraper = async () => {
           date: fechaUTC,
         };
 
+        // Find the document by field "name"
+        const auction = await collection.findOne({ name: key });
+
+        console.log(auction?.last_auction);
+        console.log(fechaUTC);
+
+        if (auction?.last_auction >= fechaUTC) {
+          console.log(
+            `LOS REGISTROS DE LA WEB DE LA SUBASTA ${key} NO SE HAN ACTUALIZADO, FECHA: ${fechaUTC
+              .toISOString()
+              .substring(0, 10)}`
+          );
+          break;
+        }
+
+        // Update the document with the new registry of prices
         const result = await collection.updateOne(
-          filtro,
+          { name: key },
           {
-            $push: { prices: nuevoPrice },
-            $set: { last_auction: fechaUTC }, // Agregamos el campo last_auction con el valor de fechaUTC
-          },
-          { upsert: true }
+            $push: {
+              prices: {
+                $each: [nuevoPrice],
+                $position: 0,
+              },
+            },
+          }
         );
 
         if (!result) {
           console.log("Error al agregar el nuevo precio");
         }
-
         console.log(
-          `Precio agregado con éxito ${index} / ${tablaFilas.length}`
+          `Precio agregado con éxito ${index + 1} / ${tablaFilas.length}`
         );
+
+        // Actualizar finalmente el campo last_auction
+        if (index === tablaFilas.length - 1) {
+          await collection.updateOne(filtro, {
+            $set: { last_auction: fechaUTC },
+          });
+        }
       }
     } catch (error) {
       browser.close();
