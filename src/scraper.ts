@@ -1,20 +1,18 @@
 import puppeteer from "puppeteer";
 import randomUserAgent from "random-useragent";
-import { Filter, MongoClient, MongoClientOptions, UpdateFilter } from "mongodb";
-
-// PUPPETEER CONFIG
-const userAgent = randomUserAgent.getRandom();
-const CONFIG_PUPPETER = {
-  headless: true,
-  args: [userAgent, "--window-size=1200,800"],
-};
-
-// MONGODB CONFIG
-
-const uri = "mongodb://localhost:27017";
-const client = new MongoClient(uri);
+import { MongoClient } from "mongodb";
 
 export const executeScraper = async () => {
+  // PUPPETEER CONFIG
+  const userAgent = randomUserAgent.getRandom();
+  const CONFIG_PUPPETER = {
+    headless: true,
+    args: [userAgent, "--window-size=1200,800"],
+  };
+
+  // MONGODB CONFIG
+  const uri = process.env.MONGODB ?? "";
+  const client = new MongoClient(uri);
   console.log("Ejecutando script para poblar la BD de cero");
 
   const browser = await puppeteer.launch(CONFIG_PUPPETER);
@@ -39,7 +37,7 @@ export const executeScraper = async () => {
       "http://www.aurora-applnx.com/aurora_clientes/subastas/preciosViewHistorico.php?c=6",
   };
 
-  client.connect();
+  await client.connect();
   console.log("Conexión a MongoDB exitosa.");
 
   for (const key in subastas) {
@@ -88,7 +86,7 @@ export const executeScraper = async () => {
         }, celdaFecha);
 
         // Date fetching
-        const fechaLocal = new Date(Date.parse(fechaTexto));
+        const fechaLocal = new Date(fechaTexto);
         const fechaUTC = new Date(fechaLocal.toISOString());
 
         const database = client.db("fincaticadb");
@@ -103,7 +101,7 @@ export const executeScraper = async () => {
           maxPrice: precioMaxTexto,
           minPrice: precioMinTexto,
           averagePrice: precioPromTexto,
-          date: fechaUTC,
+          date: fechaLocal,
         };
 
         const result = await collection.updateOne(

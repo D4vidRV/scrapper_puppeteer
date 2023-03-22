@@ -16,17 +16,18 @@ exports.executeScraper = void 0;
 const puppeteer_1 = __importDefault(require("puppeteer"));
 const random_useragent_1 = __importDefault(require("random-useragent"));
 const mongodb_1 = require("mongodb");
-// PUPPETEER CONFIG
-const userAgent = random_useragent_1.default.getRandom();
-const CONFIG_PUPPETER = {
-    headless: true,
-    args: [userAgent, "--window-size=1200,800"],
-};
-// MONGODB CONFIG
-const uri = "mongodb://localhost:27017";
-const client = new mongodb_1.MongoClient(uri);
 const executeScraper = () => __awaiter(void 0, void 0, void 0, function* () {
-    console.log("Ejecutando funcion visitar pagina!!");
+    var _a;
+    // PUPPETEER CONFIG
+    const userAgent = random_useragent_1.default.getRandom();
+    const CONFIG_PUPPETER = {
+        headless: true,
+        args: [userAgent, "--window-size=1200,800"],
+    };
+    // MONGODB CONFIG
+    const uri = (_a = process.env.MONGODB) !== null && _a !== void 0 ? _a : "";
+    const client = new mongodb_1.MongoClient(uri);
+    console.log("Ejecutando script para poblar la BD de cero");
     const browser = yield puppeteer_1.default.launch(CONFIG_PUPPETER);
     const page = yield browser.newPage();
     page.setDefaultTimeout(40000);
@@ -40,7 +41,7 @@ const executeScraper = () => __awaiter(void 0, void 0, void 0, function* () {
         el_progreso_limonal: "http://www.aurora-applnx.com/aurora_clientes/subastas/preciosViewHistorico.php?c=7",
         el_progreso_parrita: "http://www.aurora-applnx.com/aurora_clientes/subastas/preciosViewHistorico.php?c=6",
     };
-    client.connect();
+    yield client.connect();
     console.log("Conexión a MongoDB exitosa.");
     for (const key in subastas) {
         console.log(`-----------------${key}----------------------`);
@@ -76,7 +77,7 @@ const executeScraper = () => __awaiter(void 0, void 0, void 0, function* () {
                     return celdaFecha === null || celdaFecha === void 0 ? void 0 : celdaFecha.innerText;
                 }, celdaFecha);
                 // Date fetching
-                const fechaLocal = new Date(Date.parse(fechaTexto));
+                const fechaLocal = new Date(fechaTexto);
                 const fechaUTC = new Date(fechaLocal.toISOString());
                 const database = client.db("fincaticadb");
                 const collection = database.collection("auctions");
@@ -89,7 +90,7 @@ const executeScraper = () => __awaiter(void 0, void 0, void 0, function* () {
                     maxPrice: precioMaxTexto,
                     minPrice: precioMinTexto,
                     averagePrice: precioPromTexto,
-                    date: fechaUTC,
+                    date: fechaLocal,
                 };
                 const result = yield collection.updateOne(filtro, {
                     $push: { prices: nuevoPrice },
