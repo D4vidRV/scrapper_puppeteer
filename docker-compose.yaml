@@ -1,7 +1,7 @@
 version: '3'
 
 services:
-  fincatica-backend:
+  scrapper-puppeteer:
     build: 
       context: .
       dockerfile: Dockerfile
