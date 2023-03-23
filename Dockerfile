@@ -10,6 +10,7 @@ FROM node:18-alpine3.15 AS builder
 WORKDIR /app
 COPY --from=dependencies /app/node_modules ./node_modules
 COPY . .
+RUN yarn global add typescript
 RUN yarn build
 
 FROM node:18-alpine3.15 AS runner
