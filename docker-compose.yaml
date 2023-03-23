@@ -1,0 +1,12 @@
+version: '3'
+
+services:
+  fincatica-backend:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    image: scrapper-puppeteer
+    container_name: scrapper
+    restart: always # reiniciar el contenedor si se detiene
+    environment:
+      MONGODB: ${MONGODB}

@@ -23,6 +23,6 @@ const update_scraper_1 = require("./update_scraper");
 const cron = __importStar(require("node-cron"));
 const dotenv = __importStar(require("dotenv"));
 dotenv.config();
-const task = cron.schedule("11 17 * * *", () => {
+const task = cron.schedule("30 17 * * *", () => {
     (0, update_scraper_1.executeUpdateScraper)();
 });
