@@ -1,25 +1,25 @@
 import puppeteer from "puppeteer";
 import randomUserAgent from "random-useragent";
-import { Filter, MongoClient, MongoClientOptions, UpdateFilter } from "mongodb";
+import { MongoClient } from "mongodb";
+import chromium from "chrome-aws-lambda";
 
-export const executeUpdateScraper = async () => {
-  console.log("Ejecutando script para actualizar registros!!");
-  
-  // PUPPETEER CONFIG
+export const executeTestScrapper = async () => {
+  console.log("Ejecutando test");
+
   const userAgent = randomUserAgent.getRandom();
-  const CONFIG_PUPPETER = {
-    headless: true,
-    args: [userAgent, "--window-size=1200,800"],
-  };
-
   // MONGODB CONFIG
   const uri = process.env.MONGODB ?? "";
   const client = new MongoClient(uri);
 
-  const browser = await puppeteer.launch(CONFIG_PUPPETER);
+  const browser = await puppeteer.launch({
+    args: chromium.args,
+    defaultViewport: chromium.defaultViewport,
+    executablePath: await chromium.executablePath,
+    headless: true,
+  });
+
   const page = await browser.newPage();
   page.setDefaultTimeout(40000);
-  page.setViewport({ width: 1920, height: 1080 });
 
   const subastas: any = {
     san_carlos:
@@ -38,9 +38,6 @@ export const executeUpdateScraper = async () => {
       "http://www.aurora-applnx.com/aurora_clientes/subastas/index.php?c=6",
   };
 
-  await client.connect();
-  console.log("Conexión a MongoDB exitosa.");
-
   for (const key in subastas) {
     console.log(`-----------------${key}----------------------`);
 
@@ -49,16 +46,12 @@ export const executeUpdateScraper = async () => {
       await page.waitForSelector("table");
 
       const tablaFilas = await page.$x("//tbody//tr");
-
       let celdaTipoAnimal;
       let celdaRangoPeso;
       let celdaPrecioMax;
       let celdaPrecioMin;
       let celdaPrecioProm;
       let celdaFecha;
-
-      const database = client.db("fincaticadb");
-      const collection = database.collection("auctions");
 
       for (const [index, value] of tablaFilas.reverse().entries()) {
         const celdas = await value.$x("./td");
@@ -96,70 +89,11 @@ export const executeUpdateScraper = async () => {
           return celdaFecha?.innerText;
         }, celdaFecha);
 
-        // Date fetching
-        const fechaLocal = new Date(Date.parse(fechaTexto));
-        const fechaUTC = new Date(fechaLocal.toISOString());
-
-        const filtro = {
-          name: key,
-        };
-
-        const nuevoPrice = {
-          animaltype: tipoAnimalTexto,
-          weightRange: rangoPesoTexto,
-          maxPrice: precioMaxTexto,
-          minPrice: precioMinTexto,
-          averagePrice: precioPromTexto,
-          date: fechaUTC,
-        };
-
-        // Find the document by field "name"
-        const auction = await collection.findOne({ name: key });
-
-        console.log(auction?.last_auction);
-        console.log(fechaUTC);
-
-        if (auction?.last_auction >= fechaUTC) {
-          console.log(
-            `LOS REGISTROS DE LA WEB DE LA SUBASTA ${key} NO SE HAN ACTUALIZADO, FECHA: ${fechaUTC
-              .toISOString()
-              .substring(0, 10)}`
-          );
-          break;
-        }
-
-        // Update the document with the new registry of prices
-        const result = await collection.updateOne(
-          { name: key },
-          {
-            $push: {
-              prices: {
-                $each: [nuevoPrice],
-                $position: 0,
-              },
-            },
-          }
-        );
-
-        if (!result) {
-          console.log("Error al agregar el nuevo precio");
-        }
-        console.log(
-          `Precio agregado con éxito ${index + 1} / ${tablaFilas.length}`
-        );
-
-        // Actualizar finalmente el campo last_auction
-        if (index === tablaFilas.length - 1) {
-          await collection.updateOne(filtro, {
-            $set: { last_auction: fechaUTC },
-          });
-        }
+        console.log(`TIPO ANIMAL: ${tipoAnimalTexto}`);
       }
     } catch (error) {
-      browser.close();
-      console.log("Error al obtener datos", error);
+      console.log(error);
     }
   }
-  client.close();
   browser.close();
 };

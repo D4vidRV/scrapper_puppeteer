@@ -1,10 +1,11 @@
+import * as dotenv from "dotenv";
+import * as cron from "node-cron";
 import { executeScraper } from "./scraper";
 import { executeUpdateScraper } from "./update_scraper";
-import * as cron from "node-cron";
-import * as dotenv from "dotenv";
+import { executeTestScrapper } from "./test_scrapper";
 
 dotenv.config();
 
 const task = cron.schedule("30 17 * * *", () => {
-  executeUpdateScraper();
+  executeTestScrapper();
 });
