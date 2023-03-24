@@ -14,6 +14,8 @@ RUN yarn global add typescript
 RUN yarn build
 
 FROM node:18-alpine3.15 AS runner
+# Install chromium
+RUN apk add --no-cache chromium
 # Set working directory
 WORKDIR /usr/src/app
 COPY package.json yarn.lock ./

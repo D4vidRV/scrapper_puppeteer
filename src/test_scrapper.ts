@@ -11,10 +11,10 @@ export const executeTestScrapper = async () => {
   const uri = process.env.MONGODB ?? "";
   const client = new MongoClient(uri);
 
-  const browser = await puppeteer.launch({
+  const browser = await chromium.puppeteer.launch({
     args: chromium.args,
     defaultViewport: chromium.defaultViewport,
-    executablePath: await chromium.executablePath,
+    executablePath: '/usr/bin/chromium-browser',
     headless: true,
   });
 
@@ -63,29 +63,29 @@ export const executeTestScrapper = async () => {
         celdaPrecioProm = celdas[4];
         celdaFecha = celdas[5];
 
-        let tipoAnimalTexto = await page.evaluate((celdaTipoAnimal) => {
+        let tipoAnimalTexto = await page.evaluate((celdaTipoAnimal: any) => {
           return celdaTipoAnimal?.innerText;
         }, celdaTipoAnimal);
 
         tipoAnimalTexto = tipoAnimalTexto.replace(/^\d+\.\s/, "");
 
-        const rangoPesoTexto = await page.evaluate((celdaRangoPeso) => {
+        const rangoPesoTexto = await page.evaluate((celdaRangoPeso: any) => {
           return celdaRangoPeso?.innerText;
         }, celdaRangoPeso);
 
-        const precioMaxTexto = await page.evaluate((celdaPrecioMax) => {
+        const precioMaxTexto = await page.evaluate((celdaPrecioMax: any) => {
           return celdaPrecioMax?.innerText;
         }, celdaPrecioMax);
 
-        const precioMinTexto = await page.evaluate((celdaPrecioMin) => {
+        const precioMinTexto = await page.evaluate((celdaPrecioMin: any) => {
           return celdaPrecioMin?.innerText;
         }, celdaPrecioMin);
 
-        const precioPromTexto = await page.evaluate((celdaPrecioProm) => {
+        const precioPromTexto = await page.evaluate((celdaPrecioProm: any) => {
           return celdaPrecioProm?.innerText;
         }, celdaPrecioProm);
 
-        const fechaTexto = await page.evaluate((celdaFecha) => {
+        const fechaTexto = await page.evaluate((celdaFecha: any) => {
           return celdaFecha?.innerText;
         }, celdaFecha);
 

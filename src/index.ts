@@ -7,5 +7,5 @@ import { executeTestScrapper } from "./test_scrapper";
 dotenv.config();
 
 const task = cron.schedule("30 17 * * *", () => {
-  executeTestScrapper();
+  executeUpdateScraper();
 });
