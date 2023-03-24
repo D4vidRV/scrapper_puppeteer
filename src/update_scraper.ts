@@ -1,5 +1,6 @@
 import randomUserAgent from "random-useragent";
 import { MongoClient } from "mongodb";
+import puppeteer from "puppeteer";
 import chromium from "chrome-aws-lambda";
 
 export const executeUpdateScraper = async () => {
@@ -12,7 +13,7 @@ export const executeUpdateScraper = async () => {
   const uri = process.env.MONGODB ?? "";
   const client = new MongoClient(uri);
 
-  const browser = await chromium.puppeteer.launch({
+  const browser = await puppeteer.launch({
     args: chromium.args,
     defaultViewport: chromium.defaultViewport,
     executablePath: "usr/bin/chromium-browser",
@@ -20,7 +21,6 @@ export const executeUpdateScraper = async () => {
   });
   const page = await browser.newPage();
   page.setDefaultTimeout(40000);
-  page.setViewport({ width: 1920, height: 1080 });
 
   const subastas: any = {
     san_carlos:
@@ -71,29 +71,29 @@ export const executeUpdateScraper = async () => {
         celdaPrecioProm = celdas[4];
         celdaFecha = celdas[5];
 
-        let tipoAnimalTexto = await page.evaluate((celdaTipoAnimal: any) => {
+        let tipoAnimalTexto = await page.evaluate((celdaTipoAnimal) => {
           return celdaTipoAnimal?.innerText;
         }, celdaTipoAnimal);
 
         tipoAnimalTexto = tipoAnimalTexto.replace(/^\d+\.\s/, "");
 
-        const rangoPesoTexto = await page.evaluate((celdaRangoPeso: any) => {
+        const rangoPesoTexto = await page.evaluate((celdaRangoPeso) => {
           return celdaRangoPeso?.innerText;
         }, celdaRangoPeso);
 
-        const precioMaxTexto = await page.evaluate((celdaPrecioMax: any) => {
+        const precioMaxTexto = await page.evaluate((celdaPrecioMax) => {
           return celdaPrecioMax?.innerText;
         }, celdaPrecioMax);
 
-        const precioMinTexto = await page.evaluate((celdaPrecioMin: any) => {
+        const precioMinTexto = await page.evaluate((celdaPrecioMin) => {
           return celdaPrecioMin?.innerText;
         }, celdaPrecioMin);
 
-        const precioPromTexto = await page.evaluate((celdaPrecioProm: any) => {
+        const precioPromTexto = await page.evaluate((celdaPrecioProm) => {
           return celdaPrecioProm?.innerText;
         }, celdaPrecioProm);
 
-        const fechaTexto = await page.evaluate((celdaFecha: any) => {
+        const fechaTexto = await page.evaluate((celdaFecha) => {
           return celdaFecha?.innerText;
         }, celdaFecha);
 

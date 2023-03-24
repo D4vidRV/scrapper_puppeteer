@@ -8,10 +8,11 @@ export const executeTestScrapper = async () => {
 
   const userAgent = randomUserAgent.getRandom();
   // MONGODB CONFIG
+  console.log(`CNN MONGO: ${process.env.MONGODB}`);
   const uri = process.env.MONGODB ?? "";
   const client = new MongoClient(uri);
 
-  const browser = await chromium.puppeteer.launch({
+  const browser = await puppeteer.launch({
     args: chromium.args,
     defaultViewport: chromium.defaultViewport,
     executablePath: '/usr/bin/chromium-browser',
@@ -63,29 +64,29 @@ export const executeTestScrapper = async () => {
         celdaPrecioProm = celdas[4];
         celdaFecha = celdas[5];
 
-        let tipoAnimalTexto = await page.evaluate((celdaTipoAnimal: any) => {
+        let tipoAnimalTexto = await page.evaluate((celdaTipoAnimal) => {
           return celdaTipoAnimal?.innerText;
         }, celdaTipoAnimal);
 
         tipoAnimalTexto = tipoAnimalTexto.replace(/^\d+\.\s/, "");
 
-        const rangoPesoTexto = await page.evaluate((celdaRangoPeso: any) => {
+        const rangoPesoTexto = await page.evaluate((celdaRangoPeso) => {
           return celdaRangoPeso?.innerText;
         }, celdaRangoPeso);
 
-        const precioMaxTexto = await page.evaluate((celdaPrecioMax: any) => {
+        const precioMaxTexto = await page.evaluate((celdaPrecioMax) => {
           return celdaPrecioMax?.innerText;
         }, celdaPrecioMax);
 
-        const precioMinTexto = await page.evaluate((celdaPrecioMin: any) => {
+        const precioMinTexto = await page.evaluate((celdaPrecioMin) => {
           return celdaPrecioMin?.innerText;
         }, celdaPrecioMin);
 
-        const precioPromTexto = await page.evaluate((celdaPrecioProm: any) => {
+        const precioPromTexto = await page.evaluate((celdaPrecioProm) => {
           return celdaPrecioProm?.innerText;
         }, celdaPrecioProm);
 
-        const fechaTexto = await page.evaluate((celdaFecha: any) => {
+        const fechaTexto = await page.evaluate((celdaFecha) => {
           return celdaFecha?.innerText;
         }, celdaFecha);
 
