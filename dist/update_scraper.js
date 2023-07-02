@@ -41,18 +41,12 @@ const executeUpdateScraper = () => __awaiter(void 0, void 0, void 0, function* (
     page.setDefaultTimeout(40000);
     const subastas = {
         san_carlos: "http://www.aurora-applnx.com/aurora_clientes/subastas/subastaGanaderaList.php?c=1&h=true",
-        // el_progreso_barranca:
-        //   "http://www.aurora-applnx.com/aurora_clientes/subastas/subastaGanaderaList.php?c=2&h=true",
-        // el_progreso_nicoya:
-        //   "http://www.aurora-applnx.com/aurora_clientes/subastas/subastaGanaderaList.php?c=3&h=true",
-        // maleco:
-        //   "http://www.aurora-applnx.com/aurora_clientes/subastas/subastaGanaderaList.php?c=4&h=true",
-        // montecillos:
-        //   "http://www.aurora-applnx.com/aurora_clientes/subastas/subastaGanaderaList.php?c=5&h=true",
-        // el_progreso_parrita:
-        //   "http://www.aurora-applnx.com/aurora_clientes/subastas/subastaGanaderaList.php?c=6&h=true",
-        // el_progreso_limonal:
-        //   "http://www.aurora-applnx.com/aurora_clientes/subastas/subastaGanaderaList.php?c=7&h=true",
+        el_progreso_barranca: "http://www.aurora-applnx.com/aurora_clientes/subastas/subastaGanaderaList.php?c=2&h=true",
+        el_progreso_nicoya: "http://www.aurora-applnx.com/aurora_clientes/subastas/subastaGanaderaList.php?c=3&h=true",
+        maleco: "http://www.aurora-applnx.com/aurora_clientes/subastas/subastaGanaderaList.php?c=4&h=true",
+        montecillos: "http://www.aurora-applnx.com/aurora_clientes/subastas/subastaGanaderaList.php?c=5&h=true",
+        el_progreso_parrita: "http://www.aurora-applnx.com/aurora_clientes/subastas/subastaGanaderaList.php?c=6&h=true",
+        el_progreso_limonal: "http://www.aurora-applnx.com/aurora_clientes/subastas/subastaGanaderaList.php?c=7&h=true",
     };
     yield client.connect();
     console.log("Conexión a MongoDB exitosa.");
@@ -92,9 +86,7 @@ const executeUpdateScraper = () => __awaiter(void 0, void 0, void 0, function* (
                         averagePrice: precioPromTexto,
                         date: fechaUTC,
                     };
-                    console.log(index + 1);
-                    console.log(nuevoPrice);
-                    // ----------FIND_DATABASE--------------
+                    console.log(`Registro ${index + 1} / ${tablaFilas.length}`);
                     // Find the document by field "name"
                     const auction = yield collection.findOne({ name: key });
                     console.log(`Fecha último registro en BD: ${auction === null || auction === void 0 ? void 0 : auction.last_auction.toISOString()}`);
@@ -115,11 +107,35 @@ const executeUpdateScraper = () => __awaiter(void 0, void 0, void 0, function* (
                 console.log("Error al obtener datos", error);
             }
         }
-        // Insert array in DB
-        console.log("-----------Elementos a insertar-------------");
-        registriesToInsert.reverse().forEach((element) => {
-            console.log(element);
-        });
+        // Sort Array
+        registriesToInsert.sort(compareObjects);
+        // ------------INSERT ARRAY IN DB-------------
+        for (let index = registriesToInsert.length - 1; index >= 0; index--) {
+            const element = registriesToInsert[index];
+            try {
+                // Update the document with the new registry of prices
+                const result = yield collection.updateOne({ name: key }, {
+                    $push: {
+                        prices: {
+                            $each: [element],
+                            $position: 0,
+                        },
+                    },
+                });
+                console.log(`Precio agregado con éxito ${registriesToInsert.length - index} / ${registriesToInsert.length}`);
+                // Actualizar finalmente el campo last_auction
+                if (index === 0) {
+                    yield collection.updateOne({
+                        name: key,
+                    }, {
+                        $set: { last_auction: element.date },
+                    });
+                }
+            }
+            catch (error) {
+                console.log(`Error al insertar en BD: ${error}`);
+            }
+        }
     }
     client.close();
     browser.close();
@@ -130,3 +146,17 @@ const getTextOfcell = (page, cell) => __awaiter(void 0, void 0, void 0, function
         return cell === null || cell === void 0 ? void 0 : cell.innerText;
     }, cell);
 });
+function compareObjects(a, b) {
+    // Comparar por animaltype primero
+    if (a.animaltype < b.animaltype)
+        return -1;
+    if (a.animaltype > b.animaltype)
+        return 1;
+    // Si los animaltype son iguales, comparar por weightRange
+    if (a.weightRange < b.weightRange)
+        return -1;
+    if (a.weightRange > b.weightRange)
+        return 1;
+    // Si ambos son iguales, no hay cambios en el orden
+    return 0;
+}
