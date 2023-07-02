@@ -26,25 +26,25 @@ export const executeUpdateScraper = async () => {
     defaultViewport: { width: 1920, height: 1080 },
   };
 
-  const browser = await puppeteer.launch(LOCAL_PUPPETER_CONFIG);
+  const browser = await puppeteer.launch(DOCKER_PUPPETER_CONFIG);
   const page = await browser.newPage();
   page.setDefaultTimeout(40000);
 
   const subastas: any = {
     san_carlos:
       "http://www.aurora-applnx.com/aurora_clientes/subastas/subastaGanaderaList.php?c=1&h=true",
-    // el_progreso_barranca:
-    //   "http://www.aurora-applnx.com/aurora_clientes/subastas/subastaGanaderaList.php?c=2&h=true",
-    // el_progreso_nicoya:
-    //   "http://www.aurora-applnx.com/aurora_clientes/subastas/subastaGanaderaList.php?c=3&h=true",
-    // maleco:
-    //   "http://www.aurora-applnx.com/aurora_clientes/subastas/subastaGanaderaList.php?c=4&h=true",
-    // montecillos:
-    //   "http://www.aurora-applnx.com/aurora_clientes/subastas/subastaGanaderaList.php?c=5&h=true",
-    // el_progreso_parrita:
-    //   "http://www.aurora-applnx.com/aurora_clientes/subastas/subastaGanaderaList.php?c=6&h=true",
-    // el_progreso_limonal:
-    //   "http://www.aurora-applnx.com/aurora_clientes/subastas/subastaGanaderaList.php?c=7&h=true",
+    el_progreso_barranca:
+      "http://www.aurora-applnx.com/aurora_clientes/subastas/subastaGanaderaList.php?c=2&h=true",
+    el_progreso_nicoya:
+      "http://www.aurora-applnx.com/aurora_clientes/subastas/subastaGanaderaList.php?c=3&h=true",
+    maleco:
+      "http://www.aurora-applnx.com/aurora_clientes/subastas/subastaGanaderaList.php?c=4&h=true",
+    montecillos:
+      "http://www.aurora-applnx.com/aurora_clientes/subastas/subastaGanaderaList.php?c=5&h=true",
+    el_progreso_parrita:
+      "http://www.aurora-applnx.com/aurora_clientes/subastas/subastaGanaderaList.php?c=6&h=true",
+    el_progreso_limonal:
+      "http://www.aurora-applnx.com/aurora_clientes/subastas/subastaGanaderaList.php?c=7&h=true",
   };
 
   await client.connect();
@@ -100,11 +100,8 @@ export const executeUpdateScraper = async () => {
             date: fechaUTC,
           };
 
-          console.log(index + 1);
+          console.log(`Registro ${index + 1} / ${tablaFilas.length}`);
 
-          console.log(nuevoPrice);
-
-          // ----------FIND_DATABASE--------------
           // Find the document by field "name"
           const auction = await collection.findOne({ name: key });
           console.log(
@@ -133,8 +130,12 @@ export const executeUpdateScraper = async () => {
       }
     }
 
+    // Sort Array
+    registriesToInsert.sort(compareObjects);
+
     // ------------INSERT ARRAY IN DB-------------
-    registriesToInsert.reverse().forEach(async (element, index) => {
+    for (let index = registriesToInsert.length - 1; index >= 0; index--) {
+      const element = registriesToInsert[index];
       try {
         // Update the document with the new registry of prices
         const result = await collection.updateOne(
@@ -150,13 +151,13 @@ export const executeUpdateScraper = async () => {
         );
 
         console.log(
-          `Precio agregado con éxito ${index + 1} / ${
+          `Precio agregado con éxito ${registriesToInsert.length - index} / ${
             registriesToInsert.length
           }`
         );
 
         // Actualizar finalmente el campo last_auction
-        if (index === registriesToInsert.length - 1) {
+        if (index === 0) {
           await collection.updateOne(
             {
               name: key,
@@ -169,7 +170,7 @@ export const executeUpdateScraper = async () => {
       } catch (error) {
         console.log(`Error al insertar en BD: ${error}`);
       }
-    });
+    }
   }
   client.close();
   browser.close();
@@ -183,3 +184,16 @@ const getTextOfcell = async (
     return cell?.innerText;
   }, cell);
 };
+
+function compareObjects(a : any, b: any) {
+  // Comparar por animaltype primero
+  if (a.animaltype < b.animaltype) return -1;
+  if (a.animaltype > b.animaltype) return 1;
+
+  // Si los animaltype son iguales, comparar por weightRange
+  if (a.weightRange < b.weightRange) return -1;
+  if (a.weightRange > b.weightRange) return 1;
+
+  // Si ambos son iguales, no hay cambios en el orden
+  return 0;
+}

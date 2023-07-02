@@ -1,12 +1,12 @@
 version: '3'
 
 services:
-  scrapper-puppeteer:
+  scrapper-puppeteer_2.0:
     build: 
       context: .
       dockerfile: Dockerfile
     image: scrapper-puppeteer
-    container_name: scrapper
+    container_name: scrapper_2.0.0
     restart: always # reiniciar el contenedor si se detiene
     environment:
       MONGODB: ${MONGODB}
