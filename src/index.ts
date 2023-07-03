@@ -6,6 +6,6 @@ import { executeTestScrapper } from "./test_scrapper";
 
 dotenv.config();
 
-// const task = cron.schedule("* * * * *", () => {
+const task = cron.schedule("*/2 * * * *", () => {
   executeUpdateScraper();
-// });
+});

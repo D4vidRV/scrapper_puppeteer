@@ -15,9 +15,9 @@ export const executeUpdateScraper = async () => {
 
   const DOCKER_PUPPETER_CONFIG = {
     headless: true,
+    executablePath: "/usr/bin/google-chrome",
     args: chromium.args,
     defaultViewport: chromium.defaultViewport,
-    executablePath: "usr/bin/chromium-browser",
   };
 
   const LOCAL_PUPPETER_CONFIG = {
